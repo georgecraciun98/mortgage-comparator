@@ -1,0 +1,15 @@
+[
+    {
+        "bank": "ING",
+        "interest": 5.19
+    },
+    {
+        "bank": "BCR",
+        "interest": 5.39
+    },
+    {
+        "bank": "BT",
+        "interest": 5.45
+    }
+]
+
