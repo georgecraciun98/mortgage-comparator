@@ -1,12 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+
+from sqlalchemy.orm import Session
+
 from calculator import monthly_payment
-import json
-from pathlib import Path
+from database import get_db
+from models import MortgageProduct
 
 app = FastAPI()
 
-# Allow the Next.js frontend to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -15,31 +17,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Locate banks.json regardless of where the app is started
-BASE_DIR = Path(__file__).resolve().parent
-BANKS_FILE = BASE_DIR.parent / "data" / "banks.json"
-
 
 @app.get("/")
 def home():
-    return {"message": "Mortgage Comparison API is running!"}
+    return {
+        "message": "Mortgage Comparison API is running!"
+    }
 
 
 @app.get("/compare")
-def compare(price: float, down: float, years: int):
-    # Load bank data
-    with open(BANKS_FILE, "r") as f:
-        banks = json.load(f)
-
-    # Calculate loan amount
+def compare(
+    price: float,
+    down: float,
+    years: int,
+    db: Session = Depends(get_db),
+):
     loan = price * (1 - down / 100)
+
+    products = (
+        db.query(MortgageProduct)
+        .filter(MortgageProduct.active == True)
+        .all()
+    )
 
     results = []
 
-    for bank in banks:
+    for product in products:
+
         payment = monthly_payment(
             principal=loan,
-            annual_rate=bank["interest"],
+            annual_rate=product.interest_rate,
             years=years,
         )
 
@@ -47,17 +54,19 @@ def compare(price: float, down: float, years: int):
         total_interest = round(total_paid - loan, 2)
 
         results.append(
-            {
-                "bank": bank["bank"],
-                "interest": bank["interest"],
+            {   "id": product.id,
+                "bank": product.bank.name,
+                "product": product.product_name,
+                "interest": product.interest_rate,
+                "dae": product.dae,
                 "loan_amount": round(loan, 2),
                 "monthly_payment": payment,
                 "total_paid": total_paid,
                 "total_interest": total_interest,
+                "updated_at": product.updated_at,
             }
         )
 
-    # Sort by cheapest monthly payment
     results.sort(key=lambda x: x["monthly_payment"])
 
     return results

@@ -3,9 +3,17 @@
 import { useState } from "react";
 import axios from "axios";
 
+import Slider from "@/components/Slider";
+import LoanSummary from "@/components/LoanSummary";
+import BestOfferCard from "@/components/BestOfferCard";
+import OfferTable from "@/components/OfferTable";
+
 interface BankOffer {
+  id: number;
   bank: string;
+  product: string;
   interest: number;
+  dae: number;
   loan_amount: number;
   monthly_payment: number;
   total_paid: number;
@@ -20,7 +28,7 @@ export default function Home() {
   const [banks, setBanks] = useState<BankOffer[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const compareLoans = async () => {
+  async function compareLoans() {
     try {
       setLoading(true);
 
@@ -35,159 +43,144 @@ export default function Home() {
         }
       );
 
-      setBanks(response.data);
-    } catch (error) {
-      console.error(error);
-      alert("Could not connect to the backend.");
+      const sorted = [...response.data].sort(
+        (a, b) => a.monthly_payment - b.monthly_payment
+      );
+
+      setBanks(sorted);
+    } catch (err) {
+      console.error(err);
+      alert("Could not connect to backend.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <main className="min-h-screen bg-gray-100 p-10">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50">
 
-      <div className="max-w-5xl mx-auto">
+      {/* Hero */}
 
-        <h1 className="text-4xl font-bold mb-8">
-          Romanian Mortgage Comparator
-        </h1>
+      <section className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white">
 
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <div className="max-w-7xl mx-auto px-8 py-14">
 
-          <div className="grid grid-cols-3 gap-6">
+          <h1 className="text-5xl font-bold">
+            Romanian Mortgage Comparator
+          </h1>
 
-            <div>
-              <label className="block mb-2 font-semibold">
-                Apartment Price (€)
-              </label>
-
-              <input
-                type="number"
-                className="w-full border rounded p-2"
-                value={price}
-                onChange={(e) => setPrice(Number(e.target.value))}
-              />
-            </div>
-
-            <div>
-              <label className="block mb-2 font-semibold">
-                Down Payment (%)
-              </label>
-
-              <input
-                type="number"
-                className="w-full border rounded p-2"
-                value={down}
-                onChange={(e) => setDown(Number(e.target.value))}
-              />
-            </div>
-
-            <div>
-              <label className="block mb-2 font-semibold">
-                Loan Years
-              </label>
-
-              <input
-                type="number"
-                className="w-full border rounded p-2"
-                value={years}
-                onChange={(e) => setYears(Number(e.target.value))}
-              />
-            </div>
-
-          </div>
-
-          <button
-            onClick={compareLoans}
-            className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
-          >
-            Compare Banks
-          </button>
+          <p className="mt-4 text-slate-300 text-xl max-w-2xl">
+            Compare mortgage offers from Romania's leading banks,
+            calculate your monthly payment and find the cheapest loan
+            in seconds.
+          </p>
 
         </div>
 
-        {loading && (
-          <p className="text-lg">
-            Calculating offers...
-          </p>
-        )}
+      </section>
 
-        {banks.length > 0 && (
+      <div className="max-w-7xl mx-auto px-8 py-10">
 
-          <div className="bg-white rounded-xl shadow-md p-6">
+        {/* Calculator + Best Offer */}
 
-            <h2 className="text-2xl font-bold mb-4">
-              Mortgage Offers
+        <div className="grid lg:grid-cols-2 gap-8">
+
+          {/* Left */}
+
+          <div className="bg-white/80 backdrop-blur-xl border border-white shadow-2xl rounded-3xl shadow-xl p-8">
+
+            <h2 className="text-3xl font-bold mb-10">
+              Mortgage Calculator
             </h2>
 
-            <table className="w-full border-collapse">
+            <div className="space-y-10">
 
-              <thead>
+              <Slider
+                label="Apartment Price"
+                value={price}
+                min={30000}
+                max={300000}
+                step={5000}
+                prefix="€"
+                onChange={setPrice}
+              />
 
-                <tr className="border-b">
+              <Slider
+                label="Down Payment"
+                value={down}
+                min={15}
+                max={60}
+                suffix="%"
+                onChange={setDown}
+              />
 
-                  <th className="text-left p-3">Bank</th>
+              <Slider
+                label="Loan Duration"
+                value={years}
+                min={5}
+                max={35}
+                suffix=" years"
+                onChange={setYears}
+              />
 
-                  <th className="text-left p-3">
-                    Interest
-                  </th>
+            </div>
 
-                  <th className="text-left p-3">
-                    Monthly Payment
-                  </th>
+            <div className="mt-10">
 
-                  <th className="text-left p-3">
-                    Total Interest
-                  </th>
+              <LoanSummary
+                price={price}
+                down={down}
+                years={years}
+              />
 
-                  <th className="text-left p-3">
-                    Total Paid
-                  </th>
+            </div>
 
-                </tr>
+            <button
+              onClick={compareLoans}
+              className="w-full mt-8 rounded-xl bg-gradient-to-r
+from-blue-600
+to-indigo-600 hover:bg-blue-700 transition text-white font-bold text-lg py-4
+hover:scale-[1.02]
+hover:shadow-xl
+transition-all
+duration-300"
+            >
+              Compare Banks
+            </button>
 
-              </thead>
+          </div>
 
-              <tbody>
+          {/* Right */}
 
-                {banks.map((bank) => (
+          <BestOfferCard
+            offer={banks.length ? banks[0] : undefined}
+          />
 
-                  <tr
-                    key={bank.bank}
-                    className="border-b hover:bg-gray-50"
-                  >
+        </div>
 
-                    <td className="p-3 font-semibold">
-                      {bank.bank}
-                    </td>
+        {/* Loading */}
 
-                    <td className="p-3">
-                      {bank.interest}%
-                    </td>
+        {loading && (
 
-                    <td className="p-3 text-green-600 font-bold">
-                      €
-                      {bank.monthly_payment.toLocaleString()}
-                    </td>
+          <div className="mt-12 text-center">
 
-                    <td className="p-3">
-                      €
-                      {bank.total_interest.toLocaleString()}
-                    </td>
+            <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
 
-                    <td className="p-3">
-                      €
-                      {bank.total_paid.toLocaleString()}
-                    </td>
+            <p className="mt-4 text-slate-500">
+              Calculating mortgage offers...
+            </p>
 
-                  </tr>
+          </div>
 
-                ))}
+        )}
 
-              </tbody>
+        {/* Results */}
 
-            </table>
+        {!loading && banks.length > 0 && (
+
+          <div className="mt-12">
+
+            <OfferTable offers={banks} />
 
           </div>
 
